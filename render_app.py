@@ -1,7 +1,7 @@
-# render_app.py - OPTIMIZED FOR MOBILE APP
+# render_app.py - FIXED VERSION
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from clipix_core import SmartClipixAI
+from clipix_core import ClipixAI  # CHANGED FROM SmartClipixAI to ClipixAI
 import os
 import time
 
@@ -11,16 +11,20 @@ CORS(app)
 # Initialize AI
 print("🚀 Initializing Clipix AI for Mobile App...")
 start_time = time.time()
-ai = SmartClipixAI()
+ai = ClipixAI()  # CHANGED FROM SmartClipixAI() to ClipixAI()
 load_time = time.time() - start_time
-print(f"✅ AI Ready in {load_time:.2f}s with {len(ai.all_facts)} facts")
+
+# Get stats - UPDATED METHOD
+stats = ai.get_stats()
+print(f"✅ AI Ready in {load_time:.2f}s with {stats['total_facts']} facts")
 
 @app.route('/')
 def home():
+    stats = ai.get_stats()
     return jsonify({
         "message": "Clipix AI Mobile API", 
         "status": "running",
-        "facts": len(ai.all_facts),
+        "facts": stats['total_facts'],
         "load_time": f"{load_time:.2f}s"
     })
 
@@ -28,16 +32,15 @@ def home():
 def chat():
     try:
         data = request.get_json()
-        user_id = data.get('userId', 'anonymous')
-        message = data.get('message', '').strip()
+        user_id = data.get('userId', 'default')
+        user_message = data.get('message', '')
+        conversation_history = data.get('conversationHistory', [])
         
-        if not message:
-            return jsonify({'response': '🤖 Please send a message'})
+        print(f"📨 {user_id}: {user_message}")
+        print(f"📝 History: {conversation_history[-2:] if conversation_history else 'None'}")
         
-        print(f"📱 [{user_id}]: {message}")
-        
-        # Get AI response
-        response = ai.quick_chat(message)
+        # Get AI response - UPDATED METHOD
+        response = ai.chat(user_message)  # CHANGED FROM quick_chat_with_memory to chat
         
         print(f"🤖 AI: {response}")
         return jsonify({'response': response})
@@ -58,11 +61,14 @@ def teach():
         
         ai.add_knowledge(topic, fact)
         
+        # Get updated stats
+        stats = ai.get_stats()
+        
         return jsonify({
             'success': True,
             'message': f'✅ Learned: {fact[:50]}...',
             'topic': topic,
-            'total_facts': len(ai.all_facts)
+            'total_facts': stats['total_facts']
         })
         
     except Exception as e:
@@ -70,18 +76,22 @@ def teach():
 
 @app.route('/api/stats', methods=['GET'])
 def stats():
+    stats = ai.get_stats()
     return jsonify({
-        'total_facts': len(ai.all_facts),
-        'total_topics': len(ai.knowledge_base),
-        'topics': {topic: len(facts) for topic, facts in ai.knowledge_base.items()}
+        'total_facts': stats['total_facts'],
+        'total_topics': len(stats['topics']),
+        'topics': stats['topics'],
+        'google_enabled': stats['google_enabled'],
+        'deepseek_enabled': stats['deepseek_enabled']
     })
 
 @app.route('/health', methods=['GET'])
 def health():
+    stats = ai.get_stats()
     return jsonify({
         'status': 'healthy',
         'service': 'Clipix AI Mobile API',
-        'facts': len(ai.all_facts),
+        'facts': stats['total_facts'],
         'timestamp': time.time()
     })
 
