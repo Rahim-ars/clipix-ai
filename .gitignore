@@ -1,0 +1,28 @@
+# .gitignore - CREATE THIS FILE
+
+# API Keys and Secrets
+.env
+config.json
+secrets/
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
